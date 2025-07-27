@@ -14,7 +14,7 @@ const pwaConfig = {
 const withPWAConfig = withPWA(pwaConfig);
 
 const nextConfig = {
-  output: 'export',
+  // Removing 'output: export' to enable API routes
   eslint: {
     ignoreDuringBuilds: true,
   },
