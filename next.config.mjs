@@ -24,9 +24,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Add environment variables for Google Maps API
+  // Add environment variables for Google Maps API and other services
   env: {
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: "AIzaSyCkzMyvUKcEB1ioQs9WSjPvetC9QYoWg3U",
+    // Note: For security reasons, the Gemini API key should be set in Vercel environment variables
+    // and not hardcoded here. This is just a fallback for development.
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
   },
 
 }

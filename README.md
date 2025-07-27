@@ -131,6 +131,35 @@ The Twitter (X) API is used to post civic issues directly to Twitter. The integr
 - Tagging relevant authorities
 - Using appropriate hashtags for better visibility
 
+## Deployment on Vercel
+
+### Setting Up Environment Variables on Vercel
+
+When deploying to Vercel, you need to set up environment variables in the Vercel dashboard:
+
+1. Go to your project in the Vercel dashboard
+2. Navigate to Settings > Environment Variables
+3. Add the following environment variables:
+   - `GEMINI_API_KEY`: Your Google Gemini API key
+   - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: Your Google Maps API key
+   - `X_API_KEY`: Your Twitter API key
+   - `X_API_SECRET`: Your Twitter API secret
+   - `X_BEARER_TOKEN`: Your Twitter bearer token
+   - `X_ACCESS_TOKEN`: Your Twitter access token
+   - `X_ACCESS_TOKEN_SECRET`: Your Twitter access token secret
+   - `X_CLIENT_ID`: Your Twitter client ID
+   - `X_CLIENT_SECRET`: Your Twitter client secret
+
+### Troubleshooting Vercel Deployment
+
+If you encounter issues with the AI analysis on Vercel:
+
+1. Check that all environment variables are correctly set in the Vercel dashboard
+2. Verify that your Gemini API key is valid and has not expired
+3. Check the function logs in the Vercel dashboard for specific error messages
+4. Make sure your Gemini API key has access to the required models (gemini-1.5-flash)
+5. If you're using a free tier of Gemini API, check for usage limits
+
 ## License
 
 MIT

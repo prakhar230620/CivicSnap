@@ -485,6 +485,13 @@ export default function CivicReporter() {
 
         if (typeof errorContent === 'object' && errorContent !== null && 'error' in errorContent) {
           errorMessage = errorContent.error;
+          
+          // Check for specific API service errors
+          if (response.status === 503) {
+            errorMessage = "AI service is currently unavailable. Please check your API key configuration or try again later.";
+          } else if (errorMessage.includes("API key") || errorMessage.includes("Gemini")) {
+            errorMessage = "AI service configuration issue. Please check your API key or contact support.";
+          }
         } else if (typeof errorContent === 'string') {
           errorMessage = `${errorMessage}: ${errorContent || response.statusText}`;
         } else {
