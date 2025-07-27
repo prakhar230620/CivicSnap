@@ -151,8 +151,9 @@ export async function POST(request: NextRequest) {
     let errorDetails = "";
     if ((error as any).data) {
       try {
-        // Try to stringify the error data for more details
-        const errorDataStr = JSON.stringify((error as any).data);
+        // Try to stringify the error data for more details - store it in a variable first
+        const errorData = (error as any).data;
+        const errorDataStr = JSON.stringify(errorData);
         errorDetails = ` - Details: ${errorDataStr}`;
       } catch (e) {
         // If stringify fails, just use what we have

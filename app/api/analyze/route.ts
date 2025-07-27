@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     const result = await model.generateContent(contentParts)
     const response = await result.response
-    const text = response.text()
+    const text = response.text() // Consume the response body only once and store it
 
     // Parse the JSON response
     let aiResponse: AIResponse

@@ -536,14 +536,15 @@ export default function CivicReporter() {
       // Handle different types of errors
       let errorMessage = "Error processing your report. ";
       
-      if (error.message) {
-        if (error.message.toLowerCase().includes("location")) {
-          setLocationError(error.message);
+      if (error && error.message) {
+        const errorMsg = error.message.toString(); // Convert to string to safely use string methods
+        if (errorMsg.toLowerCase().includes("location")) {
+          setLocationError(errorMsg);
           errorMessage = "";
-        } else if (error.message.toLowerCase().includes("media")) {
-          errorMessage = `Media issue: ${error.message}`;
+        } else if (errorMsg.toLowerCase().includes("media")) {
+          errorMessage = `Media issue: ${errorMsg}`;
         } else {
-          errorMessage += error.message;
+          errorMessage += errorMsg;
         }
       } else {
         errorMessage += "Please try again.";
@@ -578,6 +579,26 @@ export default function CivicReporter() {
         body: formData,
       })
 
+      // Handle API errors
+      if (!response.ok) {
+        let errorMessage = "Failed to post tweet";
+        let errorContent;
+        try {
+          errorContent = await response.json();
+        } catch (parseError) {
+          errorContent = await response.text();
+        }
+
+        if (typeof errorContent === 'object' && errorContent !== null && 'error' in errorContent) {
+          errorMessage = errorContent.error;
+        } else if (typeof errorContent === 'string') {
+          errorMessage = `${errorMessage}: ${errorContent || response.statusText}`;
+        } else {
+          errorMessage = `${errorMessage}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
       const result: TwitterResponse = await response.json()
       setTweetResponse(result)
 
@@ -588,7 +609,7 @@ export default function CivicReporter() {
       }
     } catch (error) {
       console.error("Error posting tweet:", error)
-      alert("Error posting tweet. Please try again.")
+      alert(error instanceof Error ? error.message : "Error posting tweet. Please try again.")
     } finally {
       setIsPosting(false)
     }
