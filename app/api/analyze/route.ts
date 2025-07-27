@@ -70,20 +70,28 @@ export async function POST(request: NextRequest) {
 
     const result = await model.generateContent(contentParts)
     const response = await result.response
-    const text = response.text() // Consume the response body only once and store it
+    
+    // Get the text from the response and store it to avoid consuming the body multiple times
+    let responseText;
+    try {
+      responseText = await response.text() // Consume the response body only once and store it
+    } catch (textError) {
+      console.error("Error getting text from Gemini response:", textError)
+      throw new Error("Failed to get response from AI service")
+    }
 
     // Parse the JSON response
     let aiResponse: AIResponse
     try {
       // Clean the response to extract JSON
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         aiResponse = JSON.parse(jsonMatch[0])
       } else {
         throw new Error("No JSON found in response")
       }
     } catch (parseError) {
-      console.error("Failed to parse AI response:", text)
+      console.error("Failed to parse AI response:", responseText)
       // Fallback response
       aiResponse = {
         detected_issue: "Public infrastructure issue detected",

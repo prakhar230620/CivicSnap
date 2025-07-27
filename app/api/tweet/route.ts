@@ -153,9 +153,18 @@ export async function POST(request: NextRequest) {
       try {
         // Try to stringify the error data for more details - store it in a variable first
         const errorData = (error as any).data;
-        const errorDataStr = JSON.stringify(errorData);
+        // Make a safe copy of the error data to avoid consuming response bodies
+        const safeErrorData = typeof errorData === 'object' ? { ...errorData } : errorData;
+        // Ensure we're not trying to stringify response objects that might have been consumed
+        Object.keys(safeErrorData || {}).forEach(key => {
+          if (safeErrorData[key] && typeof safeErrorData[key] === 'object' && safeErrorData[key].constructor && safeErrorData[key].constructor.name === 'Response') {
+            safeErrorData[key] = '[Response object]';
+          }
+        });
+        const errorDataStr = JSON.stringify(safeErrorData);
         errorDetails = ` - Details: ${errorDataStr}`;
       } catch (e) {
+        console.error("Error stringifying error data:", e);
         // If stringify fails, just use what we have
         errorDetails = " - Additional error details available in server logs";
       }

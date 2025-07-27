@@ -465,6 +465,9 @@ export default function CivicReporter() {
         body: formData,
       })
 
+      // Clone the response before consuming it to avoid "Body has already been consumed" error
+      const responseClone = response.clone();
+
       // Handle API errors
       if (!response.ok) {
         let errorMessage = "Failed to process with AI";
@@ -472,7 +475,12 @@ export default function CivicReporter() {
         try {
           errorContent = await response.json();
         } catch (parseError) {
-          errorContent = await response.text();
+          try {
+            errorContent = await responseClone.text();
+          } catch (textError) {
+            console.error("Error parsing response as text:", textError);
+            errorContent = response.statusText;
+          }
         }
 
         if (typeof errorContent === 'object' && errorContent !== null && 'error' in errorContent) {
@@ -486,11 +494,22 @@ export default function CivicReporter() {
       }
 
       // Parse and return response
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error);
+      try {
+        const data = await response.json();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        return data;
+      } catch (jsonError) {
+        console.error("Error parsing response as JSON:", jsonError);
+        try {
+          // Try to parse the cloned response as text if JSON parsing fails
+          const textData = await responseClone.text();
+          throw new Error(`Invalid response format: ${textData}`);
+        } catch (textError) {
+          throw new Error("Failed to process response from server");
+        }
       }
-      return data;
     } catch (error) {
       console.error("Error in processWithAI:", error);
       throw error;
@@ -536,18 +555,21 @@ export default function CivicReporter() {
       // Handle different types of errors
       let errorMessage = "Error processing your report. ";
       
-      if (error && error.message) {
-        const errorMsg = error.message.toString(); // Convert to string to safely use string methods
-        if (errorMsg.toLowerCase().includes("location")) {
-          setLocationError(errorMsg);
-          errorMessage = "";
-        } else if (errorMsg.toLowerCase().includes("media")) {
-          errorMessage = `Media issue: ${errorMsg}`;
-        } else {
-          errorMessage += errorMsg;
-        }
+      // Ensure error is properly converted to string to avoid "Body has already been consumed" errors
+      const errorObj = error || {};
+      const errorMsg = typeof errorObj.message === 'string' 
+        ? errorObj.message 
+        : (errorObj.toString && typeof errorObj.toString === 'function' 
+            ? errorObj.toString() 
+            : 'Unknown error');
+      
+      if (errorMsg.toLowerCase().includes("location")) {
+        setLocationError(errorMsg);
+        errorMessage = "";
+      } else if (errorMsg.toLowerCase().includes("media")) {
+        errorMessage = `Media issue: ${errorMsg}`;
       } else {
-        errorMessage += "Please try again.";
+        errorMessage += errorMsg;
       }
       
       // Only show alert if it's not a location error (which is shown in the UI)
@@ -579,6 +601,9 @@ export default function CivicReporter() {
         body: formData,
       })
 
+      // Clone the response before consuming it to avoid "Body has already been consumed" error
+      const responseClone = response.clone();
+
       // Handle API errors
       if (!response.ok) {
         let errorMessage = "Failed to post tweet";
@@ -586,7 +611,12 @@ export default function CivicReporter() {
         try {
           errorContent = await response.json();
         } catch (parseError) {
-          errorContent = await response.text();
+          try {
+            errorContent = await responseClone.text();
+          } catch (textError) {
+            console.error("Error parsing response as text:", textError);
+            errorContent = response.statusText;
+          }
         }
 
         if (typeof errorContent === 'object' && errorContent !== null && 'error' in errorContent) {
@@ -599,13 +629,24 @@ export default function CivicReporter() {
         throw new Error(errorMessage);
       }
 
-      const result: TwitterResponse = await response.json()
-      setTweetResponse(result)
+      try {
+        const result: TwitterResponse = await response.json()
+        setTweetResponse(result)
 
-      if (result.success) {
-        alert("Tweet posted successfully!")
-      } else {
-        alert(`Failed to post tweet: ${result.error}`)
+        if (result.success) {
+          alert("Tweet posted successfully!")
+        } else {
+          alert(`Failed to post tweet: ${result.error}`)
+        }
+      } catch (jsonError) {
+        console.error("Error parsing tweet response as JSON:", jsonError);
+        try {
+          // Try to parse the cloned response as text if JSON parsing fails
+          const textData = await responseClone.text();
+          throw new Error(`Invalid response format: ${textData}`);
+        } catch (textError) {
+          throw new Error("Failed to process response from server");
+        }
       }
     } catch (error) {
       console.error("Error posting tweet:", error)
