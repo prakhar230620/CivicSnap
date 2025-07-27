@@ -465,26 +465,17 @@ export default function CivicReporter() {
         body: formData,
       })
 
-      // Clone the response before consuming it to avoid "Body has already been consumed" error
-      const responseClone = response.clone();
-
       // Handle API errors
       if (!response.ok) {
-        let errorMessage = "Failed to process with AI";
-        let errorContent;
-        try {
-          errorContent = await response.json();
-        } catch (parseError) {
-          try {
-            errorContent = await responseClone.text();
-          } catch (textError) {
-            console.error("Error parsing response as text:", textError);
-            errorContent = response.statusText;
-          }
-        }
+        // Create a copy of the response data to avoid consuming the body multiple times
+        const errorData = await response.json().catch(async () => {
+          // If JSON parsing fails, try to get the text
+          return { error: await response.text().catch(() => response.statusText) }
+        });
 
-        if (typeof errorContent === 'object' && errorContent !== null && 'error' in errorContent) {
-          errorMessage = errorContent.error;
+        let errorMessage = "Failed to process with AI";
+        if (typeof errorData === 'object' && errorData !== null && 'error' in errorData) {
+          errorMessage = errorData.error;
           
           // Check for specific API service errors
           if (response.status === 503) {
@@ -492,8 +483,8 @@ export default function CivicReporter() {
           } else if (errorMessage.includes("API key") || errorMessage.includes("Gemini")) {
             errorMessage = "AI service configuration issue. Please check your API key or contact support.";
           }
-        } else if (typeof errorContent === 'string') {
-          errorMessage = `${errorMessage}: ${errorContent || response.statusText}`;
+        } else if (typeof errorData === 'string') {
+          errorMessage = `${errorMessage}: ${errorData || response.statusText}`;
         } else {
           errorMessage = `${errorMessage}: ${response.statusText}`;
         }
@@ -501,22 +492,17 @@ export default function CivicReporter() {
       }
 
       // Parse and return response
-      try {
-        const data = await response.json();
-        if (data.error) {
-          throw new Error(data.error);
-        }
-        return data;
-      } catch (jsonError) {
+      const data = await response.json().catch(async (jsonError) => {
         console.error("Error parsing response as JSON:", jsonError);
-        try {
-          // Try to parse the cloned response as text if JSON parsing fails
-          const textData = await responseClone.text();
-          throw new Error(`Invalid response format: ${textData}`);
-        } catch (textError) {
-          throw new Error("Failed to process response from server");
-        }
+        // If JSON parsing fails, try to get the text
+        const textData = await response.text().catch(() => "Unknown response format");
+        throw new Error(`Invalid response format: ${textData}`);
+      });
+      
+      if (data.error) {
+        throw new Error(data.error);
       }
+      return data;
     } catch (error) {
       console.error("Error in processWithAI:", error);
       throw error;
@@ -608,52 +594,39 @@ export default function CivicReporter() {
         body: formData,
       })
 
-      // Clone the response before consuming it to avoid "Body has already been consumed" error
-      const responseClone = response.clone();
-
       // Handle API errors
       if (!response.ok) {
-        let errorMessage = "Failed to post tweet";
-        let errorContent;
-        try {
-          errorContent = await response.json();
-        } catch (parseError) {
-          try {
-            errorContent = await responseClone.text();
-          } catch (textError) {
-            console.error("Error parsing response as text:", textError);
-            errorContent = response.statusText;
-          }
-        }
+        // Create a copy of the response data to avoid consuming the body multiple times
+        const errorData = await response.json().catch(async () => {
+          // If JSON parsing fails, try to get the text
+          return { error: await response.text().catch(() => response.statusText) }
+        });
 
-        if (typeof errorContent === 'object' && errorContent !== null && 'error' in errorContent) {
-          errorMessage = errorContent.error;
-        } else if (typeof errorContent === 'string') {
-          errorMessage = `${errorMessage}: ${errorContent || response.statusText}`;
+        let errorMessage = "Failed to post tweet";
+        if (typeof errorData === 'object' && errorData !== null && 'error' in errorData) {
+          errorMessage = errorData.error;
+        } else if (typeof errorData === 'string') {
+          errorMessage = `${errorMessage}: ${errorData || response.statusText}`;
         } else {
           errorMessage = `${errorMessage}: ${response.statusText}`;
         }
         throw new Error(errorMessage);
       }
 
-      try {
-        const result: TwitterResponse = await response.json()
-        setTweetResponse(result)
-
-        if (result.success) {
-          alert("Tweet posted successfully!")
-        } else {
-          alert(`Failed to post tweet: ${result.error}`)
-        }
-      } catch (jsonError) {
+      // Parse the response as JSON
+      const result = await response.json().catch(async (jsonError) => {
         console.error("Error parsing tweet response as JSON:", jsonError);
-        try {
-          // Try to parse the cloned response as text if JSON parsing fails
-          const textData = await responseClone.text();
-          throw new Error(`Invalid response format: ${textData}`);
-        } catch (textError) {
-          throw new Error("Failed to process response from server");
-        }
+        // If JSON parsing fails, try to get the text
+        const textData = await response.text().catch(() => "Unknown response format");
+        throw new Error(`Invalid response format: ${textData}`);
+      });
+
+      // Set the tweet response and show appropriate message
+      setTweetResponse(result as TwitterResponse);
+      if (result.success) {
+        alert("Tweet posted successfully!");
+      } else {
+        alert(`Failed to post tweet: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error("Error posting tweet:", error)

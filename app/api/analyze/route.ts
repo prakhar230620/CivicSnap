@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { GoogleGenAI } from "@google/genai"
 
 // Safely get the API key with fallback error handling
 const getGeminiApiKey = () => {
@@ -11,10 +11,10 @@ const getGeminiApiKey = () => {
   return apiKey;
 };
 
-let genAI: GoogleGenerativeAI;
+let genAI: GoogleGenAI;
 
 try {
-  genAI = new GoogleGenerativeAI(getGeminiApiKey());
+  genAI = new GoogleGenAI({apiKey: getGeminiApiKey()});
 } catch (error) {
   console.error("Failed to initialize Gemini API:", error);
   // We'll handle this in the POST function
@@ -102,13 +102,15 @@ export async function POST(request: NextRequest) {
       contentParts.push(imagePart)
     }
 
-    const result = await model.generateContent(contentParts)
-    const response = await result.response
+    const result = await model.generateContent({
+      contents: [{ parts: contentParts }],
+    })
     
-    // Get the text from the response and store it to avoid consuming the body multiple times
+    // Get the text from the response directly
     let responseText;
     try {
-      responseText = await response.text() // Consume the response body only once and store it
+      // With @google/genai, we can access the text directly without consuming a body
+      responseText = result.response.text()
     } catch (textError) {
       console.error("Error getting text from Gemini response:", textError)
       throw new Error("Failed to get response from AI service")
@@ -146,7 +148,7 @@ export async function POST(request: NextRequest) {
     if (location) {
       const fallbackResponse: AIResponse = {
         detected_issue: "Public infrastructure issue",
-        location_detected: location,
+        location_detected: (location as unknown as string) || "Unknown location",
         responsible_authority: "Local Municipal Corporation",
         twitter_handles: ["@SwachhBharat", "@MyGovIndia"],
         hashtags: ["#CivicIssue", "#FixOurCity", "#PublicInfrastructure"],
