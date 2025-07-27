@@ -23,12 +23,12 @@ async function verifyTwitterCredentials() {
     console.error("Twitter credentials verification failed:", error);
     
     // Log detailed error information
-    if (error.data) {
-      console.error("Verification error details:", JSON.stringify(error.data));
+    if ((error as any).data) {
+      console.error("Verification error details:", JSON.stringify((error as any).data));
     }
     
     // Provide specific guidance based on error code
-    if (error.code === 403) {
+    if ((error as any).code === 403) {
       console.error("403 Forbidden: Your app may not have the correct permissions.");
       console.error("Make sure your Twitter Developer App has the 'Read and Write' permission.");
     }
@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
         { 
           success: false, 
           error: "Twitter API credentials verification failed", 
-          details: verificationResult.error?.message || "Unknown error",
-          code: verificationResult.error?.code || 401
+          details: (verificationResult.error as Error)?.message || "Unknown error",
+          code: (verificationResult.error as any)?.code || 401
         },
         { status: 401 }
       );
@@ -89,8 +89,8 @@ export async function POST(request: NextRequest) {
         console.error("Error uploading media:", mediaError)
         
         // Log detailed error information for debugging
-        if (mediaError.data) {
-          console.error("Media upload error details:", JSON.stringify(mediaError.data))
+        if ((mediaError as any).data) {
+          console.error("Media upload error details:", JSON.stringify((mediaError as any).data))
         }
         
         // Continue without media if upload fails
@@ -117,12 +117,12 @@ export async function POST(request: NextRequest) {
       console.error("Error posting tweet:", tweetError)
       
       // Log detailed error information for debugging
-      if (tweetError.data) {
-        console.error("Tweet posting error details:", JSON.stringify(tweetError.data))
+      if ((tweetError as any).data) {
+        console.error("Tweet posting error details:", JSON.stringify((tweetError as any).data))
       }
       
       // Check for specific error codes
-      if (tweetError.code === 403) {
+      if ((tweetError as any).code === 403) {
         console.error("403 Forbidden: This could be due to Twitter API free tier limitations or incorrect app setup")
         console.error("Make sure your Twitter Developer App is associated with a Project in the Developer Portal")
         console.error("Also verify that your app has the 'Write' permission enabled in the User authentication settings")
@@ -149,10 +149,10 @@ export async function POST(request: NextRequest) {
     
     // Check if there's data in the error object
     let errorDetails = "";
-    if (error.data) {
+    if ((error as any).data) {
       try {
         // Try to stringify the error data for more details
-        const errorDataStr = JSON.stringify(error.data);
+        const errorDataStr = JSON.stringify((error as any).data);
         errorDetails = ` - Details: ${errorDataStr}`;
       } catch (e) {
         // If stringify fails, just use what we have
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
         success: false,
         error: errorMessage,
         details: errorDetails || undefined,
-        code: error.code || 500
+        code: (error as any).code || 500
       },
       { status: 500 },
     )
