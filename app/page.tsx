@@ -468,17 +468,19 @@ export default function CivicReporter() {
       // Handle API errors
       if (!response.ok) {
         let errorMessage = "Failed to process with AI";
+        let errorContent;
         try {
-          const errorData = await response.json();
-          if (errorData && errorData.error) {
-            errorMessage = errorData.error;
-          } else {
-            const errorText = await response.text();
-            errorMessage = `${errorMessage}: ${errorText || response.statusText}`;
-          }
+          errorContent = await response.json();
         } catch (parseError) {
-          const errorText = await response.text();
-          errorMessage = `${errorMessage}: ${errorText || response.statusText}`;
+          errorContent = await response.text();
+        }
+
+        if (typeof errorContent === 'object' && errorContent !== null && 'error' in errorContent) {
+          errorMessage = errorContent.error;
+        } else if (typeof errorContent === 'string') {
+          errorMessage = `${errorMessage}: ${errorContent || response.statusText}`;
+        } else {
+          errorMessage = `${errorMessage}: ${response.statusText}`;
         }
         throw new Error(errorMessage);
       }
