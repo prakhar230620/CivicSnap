@@ -16,6 +16,10 @@ const withPWAConfig = withPWA(pwaConfig);
 const nextConfig = {
   // Optimizing for Vercel deployment
   distDir: '.next',
+  reactStrictMode: true,
+  swcMinify: false,
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
+  trailingSlash: true,
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -24,6 +28,13 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+  },
+  poweredByHeader: false,
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'civicsnap.vercel.app'],
+    },
+    serverComponents: true,
   },
   serverExternalPackages: ['genkit', '@genkit-ai/firebase', '@genkit-ai/googleai', '@google/genai'],
   // Add environment variables for Google Maps API and other services
