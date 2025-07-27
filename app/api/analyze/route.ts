@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { GoogleGenAI } from "@google/genai"
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/genai"
 
 // Safely get the API key with fallback error handling
 const getGeminiApiKey = () => {
@@ -11,10 +11,10 @@ const getGeminiApiKey = () => {
   return apiKey;
 };
 
-let genAI: GoogleGenAI;
+let genAI: GoogleGenerativeAI;
 
 try {
-  genAI = new GoogleGenAI({apiKey: getGeminiApiKey()});
+  genAI = new GoogleGenerativeAI(getGeminiApiKey());
 } catch (error) {
   console.error("Failed to initialize Gemini API:", error);
   // We'll handle this in the POST function
@@ -55,7 +55,27 @@ export async function POST(request: NextRequest) {
     // Initialize the Gemini model
     let model;
     try {
-      model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+      model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        safetySettings: [
+          {
+            category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+          }
+        ]
+      })
     } catch (modelError) {
       console.error("Error initializing Gemini model:", modelError);
       return NextResponse.json({ 
@@ -102,8 +122,18 @@ export async function POST(request: NextRequest) {
       contentParts.push(imagePart)
     }
 
+    // Configure generation options
+    const generationConfig = {
+      temperature: 0.4,
+      topP: 0.8,
+      topK: 40,
+      maxOutputTokens: 2048,
+    };
+
+    // Generate content with the model
     const result = await model.generateContent({
       contents: [{ parts: contentParts }],
+      generationConfig,
     })
     
     // Get the text from the response directly
