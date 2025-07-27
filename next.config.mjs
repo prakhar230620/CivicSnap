@@ -14,7 +14,8 @@ const pwaConfig = {
 const withPWAConfig = withPWA(pwaConfig);
 
 const nextConfig = {
-  // Removing 'output: export' to enable API routes
+  // Optimizing for Vercel deployment
+  distDir: '.next',
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -24,6 +25,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  serverExternalPackages: ['genkit', '@genkit-ai/firebase', '@genkit-ai/googleai', '@google/genai'],
   // Add environment variables for Google Maps API and other services
   env: {
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: "AIzaSyCkzMyvUKcEB1ioQs9WSjPvetC9QYoWg3U",
