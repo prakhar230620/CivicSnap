@@ -467,19 +467,11 @@ export default function CivicReporter() {
 
       // Handle API errors
       if (!response.ok) {
-        // Try to parse the error response as JSON first
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch {
+        // Create a copy of the response data to avoid consuming the body multiple times
+        const errorData = await response.json().catch(async () => {
           // If JSON parsing fails, try to get the text
-          try {
-            const textData = await response.text();
-            errorData = { error: textData || response.statusText };
-          } catch {
-            errorData = { error: response.statusText };
-          }
-        }
+          return { error: await response.text().catch(() => response.statusText) }
+        });
 
         let errorMessage = "Failed to process with AI";
         if (typeof errorData === 'object' && errorData !== null && 'error' in errorData) {
@@ -499,20 +491,13 @@ export default function CivicReporter() {
         throw new Error(errorMessage);
       }
 
-      // Parse the successful response
-      let data;
-      try {
-        data = await response.json();
-      } catch (jsonError) {
+      // Parse and return response
+      const data = await response.json().catch(async (jsonError) => {
         console.error("Error parsing response as JSON:", jsonError);
         // If JSON parsing fails, try to get the text
-        try {
-          const textData = await response.text();
-          throw new Error(`Invalid response format: ${textData}`);
-        } catch {
-          throw new Error("Failed to parse response");
-        }
-      }
+        const textData = await response.text().catch(() => "Unknown response format");
+        throw new Error(`Invalid response format: ${textData}`);
+      });
       
       if (data.error) {
         throw new Error(data.error);
@@ -611,19 +596,11 @@ export default function CivicReporter() {
 
       // Handle API errors
       if (!response.ok) {
-        // Try to parse the error response as JSON first
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch {
+        // Create a copy of the response data to avoid consuming the body multiple times
+        const errorData = await response.json().catch(async () => {
           // If JSON parsing fails, try to get the text
-          try {
-            const textData = await response.text();
-            errorData = { error: textData || response.statusText };
-          } catch {
-            errorData = { error: response.statusText };
-          }
-        }
+          return { error: await response.text().catch(() => response.statusText) }
+        });
 
         let errorMessage = "Failed to post tweet";
         if (typeof errorData === 'object' && errorData !== null && 'error' in errorData) {
@@ -636,20 +613,13 @@ export default function CivicReporter() {
         throw new Error(errorMessage);
       }
 
-      // Parse the successful response
-      let result;
-      try {
-        result = await response.json();
-      } catch (jsonError) {
+      // Parse the response as JSON
+      const result = await response.json().catch(async (jsonError) => {
         console.error("Error parsing tweet response as JSON:", jsonError);
         // If JSON parsing fails, try to get the text
-        try {
-          const textData = await response.text();
-          throw new Error(`Invalid response format: ${textData}`);
-        } catch {
-          throw new Error("Failed to parse response");
-        }
-      }
+        const textData = await response.text().catch(() => "Unknown response format");
+        throw new Error(`Invalid response format: ${textData}`);
+      });
 
       // Set the tweet response and show appropriate message
       setTweetResponse(result as TwitterResponse);

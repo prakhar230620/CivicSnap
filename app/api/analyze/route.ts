@@ -1,23 +1,19 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/genai"
+import { NextRequest, NextResponse } from "next/server"
+import { genkit } from "genkit"
+import { googleAI, gemini } from "@genkit-ai/googleai"
 
-// Safely get the API key with fallback error handling
-const getGeminiApiKey = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.error("GEMINI_API_KEY environment variable is not set");
-    throw new Error("Gemini API key is missing. Please set the GEMINI_API_KEY environment variable.");
-  }
-  return apiKey;
-};
+// Initialize Genkit with GoogleAI plugin
+const apiKey = process.env.GEMINI_API_KEY
+let ai: any = null
 
-let genAI: GoogleGenerativeAI;
-
-try {
-  genAI = new GoogleGenerativeAI(getGeminiApiKey());
-} catch (error) {
-  console.error("Failed to initialize Gemini API:", error);
-  // We'll handle this in the POST function
+// Only initialize if API key is available
+if (apiKey) {
+  ai = genkit({
+    plugins: [googleAI({ apiKey })],
+    model: gemini('gemini-1.5-flash')
+  })
+} else {
+  console.warn("GEMINI_API_KEY is not set in environment variables. Genkit will not be available.")
 }
 
 interface AIResponse {
@@ -31,9 +27,9 @@ interface AIResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if Gemini API is initialized
-    if (!genAI) {
-      console.error("Gemini API is not initialized. Check if GEMINI_API_KEY is set in environment variables.");
+    // Check if Genkit is initialized
+    if (!ai) {
+      console.error("Genkit is not initialized. Check if GEMINI_API_KEY is set in environment variables.");
       return NextResponse.json({ 
         error: "AI service is currently unavailable. Please try again later or contact support." 
       }, { status: 503 }); // Service Unavailable
@@ -49,41 +45,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Please provide issue description or location" }, { status: 400 })
     }
 
-    // Media file is optional now, but we'll still process it if provided
-    let contentParts = []
-    
-    // Initialize the Gemini model
-    let model;
-    try {
-      model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
-        safetySettings: [
-          {
-            category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-          }
-        ]
-      })
-    } catch (modelError) {
-      console.error("Error initializing Gemini model:", modelError);
-      return NextResponse.json({ 
-        error: "Failed to initialize AI model. Please try again later." 
-      }, { status: 500 });
-    }
-
-    const prompt = `
+    // Create the prompt text
+    const promptText = `
     You are an AI assistant for a civic reporting app. Based on the user's description and location information, provide a JSON response with the following structure:
 
     {
@@ -103,48 +66,45 @@ export async function POST(request: NextRequest) {
     Respond only with valid JSON.
     `
     
-    contentParts.push(prompt)
+    // Prepare the generation options
+    const generateOptions: {
+      temperature: number;
+      topK: number;
+      topP: number;
+      maxOutputTokens: number;
+      prompt: string | (string | { inlineData: { data: string; mimeType: string } })[];
+    } = {
+      temperature: 0.4,
+      topK: 32,
+      topP: 1,
+      maxOutputTokens: 2048,
+      prompt: promptText
+    };
 
-    // If media is provided, add it to the content parts
+    // If media is provided, add it to the options
     if (mediaFile) {
       // Convert file to base64 for Gemini
       const bytes = await mediaFile.arrayBuffer()
       const buffer = Buffer.from(bytes)
       const base64Data = buffer.toString("base64")
       
-      const imagePart = {
-        inlineData: {
-          data: base64Data,
-          mimeType: mediaFile.type,
-        },
-      }
-      
-      contentParts.push(imagePart)
+      // Add image to the generation options
+      generateOptions.prompt = [
+        promptText,
+        {
+          inlineData: {
+            data: base64Data,
+            mimeType: mediaFile.type
+          }
+        }
+      ];
     }
 
-    // Configure generation options
-    const generationConfig = {
-      temperature: 0.4,
-      topP: 0.8,
-      topK: 40,
-      maxOutputTokens: 2048,
-    };
-
-    // Generate content with the model
-    const result = await model.generateContent({
-      contents: [{ parts: contentParts }],
-      generationConfig,
-    })
+    // Generate content using Genkit
+    const result = await ai.generate(generateOptions);
     
-    // Get the text from the response directly
-    let responseText;
-    try {
-      // With @google/genai, we can access the text directly without consuming a body
-      responseText = result.response.text()
-    } catch (textError) {
-      console.error("Error getting text from Gemini response:", textError)
-      throw new Error("Failed to get response from AI service")
-    }
+    // Get the text from the response
+    const responseText = result.text;
 
     // Parse the JSON response
     let aiResponse: AIResponse
